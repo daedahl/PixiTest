@@ -1,56 +1,142 @@
-//Create the renderer
-var renderer = PIXI.autoDetectRenderer(512, 512);
+//Aliases
+var Container = PIXI.Container,
+    autoDetectRenderer = PIXI.autoDetectRenderer,
+    loader = PIXI.loader,
+    resources = PIXI.loader.resources,
+    Sprite = PIXI.Sprite;
 
-//Add the canvas to the HTML document
+//Create a Pixi stage and renderer
+var stage = new Container(),
+    renderer = autoDetectRenderer(512, 512);
 document.body.appendChild(renderer.view);
 
-//Create a container object called the `stage`
-var stage = new PIXI.Container();
-
-//Use Pixi's built-in `loader` object to load an image
-PIXI.loader
+//Load an image and the run the `setup` function
+loader
   .add("img/Lotso_Bear.png")
   .load(setup);
 
-var bear;
+//Define any variables that are used in more than one function
+var bear, state;
 
-//This `setup` function will run when the image has loaded
 function setup() {
 
-  //Create the sprite from the texture
-  bear = new PIXI.Sprite(
-    PIXI.loader.resources["img/Lotso_Bear.png"].texture
-  );
-
-  //Initialize the bear's velocity variables
+  //Create the `bear` sprite
+  bear = new Sprite(resources["img/Lotso_Bear.png"].texture);
+  bear.scale.set(0.25,0.25);
+  bear.y = 96;
   bear.vx = 0;
   bear.vy = 0;
-
-  //Adjust the sprite's size and position
-  bear.scale.set(0.25, 0.25);
-  bear.position.set(90,90);
-
-  //Add the sprite to the stage
   stage.addChild(bear);
+
+  //Capture the keyboard arrow keys
+  var left = keyboard(37),
+      up = keyboard(38),
+      right = keyboard(39),
+      down = keyboard(40);
+  //Left arrow key `press` method
+  left.press = function() {
+    //Change the bear's velocity when the key is pressed
+    bear.vx = -5;
+    bear.vy = 0;
+  };
+  //Left arrow key `release` method
+  left.release = function() {
+    //If the left arrow has been released, and the right arrow isn't down,
+    //and the bear isn't moving vertically:
+    //Stop the bear
+    if (!right.isDown && bear.vy === 0) {
+      bear.vx = 0;
+    }
+  };
+  //Up
+  up.press = function() {
+    bear.vy = -5;
+    bear.vx = 0;
+  };
+  up.release = function() {
+    if (!down.isDown && bear.vx === 0) {
+      bear.vy = 0;
+    }
+  };
+  //Right
+  right.press = function() {
+    bear.vx = 5;
+    bear.vy = 0;
+  };
+  right.release = function() {
+    if (!left.isDown && bear.vy === 0) {
+      bear.vx = 0;
+    }
+  };
+  //Down
+  down.press = function() {
+    bear.vy = 5;
+    bear.vx = 0;
+  };
+  down.release = function() {
+    if (!up.isDown && bear.vx === 0) {
+      bear.vy = 0;
+    }
+  };
+
+  //Set the game state
+  state = play;
 
   //Start the game loop
   gameLoop();
 }
 
-function gameLoop() {
+function gameLoop(){
 
-  //Loop this function at 60 frames per second
+  //Loop this function 60 times per second
   requestAnimationFrame(gameLoop);
 
-  //Update the cat's velocity
-  bear.vx = 1;
-  bear.vy = 1;
+  //Update the current game state:
+  state();
 
-  //Apply the velocity values to the cat's
-  //position to make it move
+  //Render the stage
+  renderer.render(stage);
+}
+
+function play() {
+
+  //Move the bear 1 pixel to the right each frame
   bear.x += bear.vx;
   bear.y += bear.vy;
+}
 
-  //Render the stage to see the animation
-  renderer.render(stage);
+//The `keyboard` helper function
+function keyboard(keyCode) {
+  var key = {};
+  key.code = keyCode;
+  key.isDown = false;
+  key.isUp = true;
+  key.press = undefined;
+  key.release = undefined;
+  //The `downHandler`
+  key.downHandler = function(event) {
+    if (event.keyCode === key.code) {
+      if (key.isUp && key.press) key.press();
+      key.isDown = true;
+      key.isUp = false;
+    }
+    event.preventDefault();
+  };
+  //The `upHandler`
+  key.upHandler = function(event) {
+    if (event.keyCode === key.code) {
+      if (key.isDown && key.release) key.release();
+      key.isDown = false;
+      key.isUp = true;
+    }
+    event.preventDefault();
+  };
+  //Attach event listeners
+  window.addEventListener(
+    "keydown", key.downHandler.bind(key), false
+  );
+  window.addEventListener(
+    "keyup", key.upHandler.bind(key), false
+  );
+  return key;
 }
