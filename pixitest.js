@@ -26,6 +26,12 @@ function setup() {
   bear.y = 96;
   bear.vx = 0;
   bear.vy = 0;
+  bear.accelerationX = 0;
+  bear.accelerationY = 0;
+  bear.frictionX = 1;
+  bear.frictionY = 1;
+  bear.speed = 0.2;
+  bear.drag = 0.98;
   stage.addChild(bear);
 
   //Capture the keyboard arrow keys
@@ -36,46 +42,50 @@ function setup() {
   //Left arrow key `press` method
   left.press = function() {
     //Change the bear's velocity when the key is pressed
-    bear.vx = -5;
-    bear.vy = 0;
+    bear.accelerationX = -bear.speed;
+    bear.frictionX = 1;
   };
   //Left arrow key `release` method
   left.release = function() {
     //If the left arrow has been released, and the right arrow isn't down,
     //and the bear isn't moving vertically:
-    //Stop the bear
-    if (!right.isDown && bear.vy === 0) {
-      bear.vx = 0;
+    //Slow the bear
+    if (!right.isDown) {
+      bear.accelerationX = 0;
+      bear.frictionX = bear.drag;
     }
   };
   //Up
   up.press = function() {
-    bear.vy = -5;
-    bear.vx = 0;
+    bear.accelerationY = -bear.speed;
+    bear.frictionY = 1;
   };
   up.release = function() {
-    if (!down.isDown && bear.vx === 0) {
-      bear.vy = 0;
+    if (!down.isDown) {
+      bear.accelerationY = 0;
+      bear.frictionY = bear.drag;
     }
   };
   //Right
   right.press = function() {
-    bear.vx = 5;
-    bear.vy = 0;
+    bear.accelerationX = bear.speed;
+    bear.frictionX = 1;
   };
   right.release = function() {
-    if (!left.isDown && bear.vy === 0) {
-      bear.vx = 0;
+    if (!left.isDown) {
+      bear.accelerationX = 0;
+      bear.frictionX = bear.drag;
     }
   };
   //Down
   down.press = function() {
-    bear.vy = 5;
-    bear.vx = 0;
+    bear.accelerationY = bear.speed;
+    bear.frictionY = 1;
   };
   down.release = function() {
-    if (!up.isDown && bear.vx === 0) {
-      bear.vy = 0;
+    if (!up.isDown) {
+      bear.accelerationY = 0;
+      bear.frictionY = bear.drag;
     }
   };
 
@@ -100,9 +110,80 @@ function gameLoop(){
 
 function play() {
 
-  //Move the bear 1 pixel to the right each frame
+  //Apply acceleration by adding the acceleration to the sprite's velocity
+  bear.vx += bear.accelerationX;
+  bear.vy += bear.accelerationY;
+
+  //Apply friction by multiplying sprite's veloctiy by the frictionY
+  bear.vx *= bear.frictionX;
+  bear.vy *= bear.frictionY;
+
+  //Gravity as a constant downwards force
+  bear.vy += 0.1;
+
+  //Apply the veloctiy to the sprite's position to make it move
   bear.x += bear.vx;
   bear.y += bear.vy;
+
+  let collision = contain(
+    bear,
+    {
+      x: 0,
+      y: 0,
+      width: renderer.view.width,
+      height: renderer.view.height
+    }
+  );
+
+  //Check for a collision. If the value of 'collision' isn't 'undefined' the sprite hit a boundry
+  if (collision) {
+
+    //Reverse the sprite's 'vx' if it hits left or right
+    if (collision.has("leftside") || collision.has("rightside")){
+      bear.vx = -bear.vx;
+    }
+
+    //Reverse the sprite's 'vy' if it hits topside or bottomside
+    if (collision.has("topside") || collision.has("bottomside")){
+      bear.vy = -bear.vy;
+    }
+  }
+}
+
+function contain(sprite, container) {
+
+  //Create a 'Set' called 'collision' to track boundries
+  var collision = new Set();
+
+  //Leftside
+  //If the sprite's x position is less than the container's, move it inside and add "leftside" to set
+  if (sprite.x < container.x) {
+    sprite.x = container.x;
+    collision.add("leftside");
+  }
+
+  //Topside
+  if (sprite.y < container.y) {
+    sprite.y = container.y;
+    collision.add("topside");
+  }
+
+  //Rightside
+  if (sprite.x + sprite.width > container.width) {
+    sprite.x = container.width - sprite.width;
+    collision.add("rightside");
+  }
+
+  //Bottomside
+  if (sprite.y +sprite.height > container.height) {
+    sprite.y = container.height - sprite.height;
+    collision.add("bottomside");
+  }
+
+  //If no collisions, set 'collision' to 'undefined'
+  if (collision.size === 0) collision = undefined;
+
+  return collision;
 }
 
 //The `keyboard` helper function
