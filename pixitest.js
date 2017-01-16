@@ -12,7 +12,7 @@ document.body.appendChild(renderer.view);
 
 //Load an image and the run the `setup` function
 loader
-  .add("img/Lotso_Bear.png")
+  .add("images/Lotso_Bear.png")
   .load(setup);
 
 //Define any variables that are used in more than one function
@@ -21,7 +21,7 @@ var bear, state;
 function setup() {
 
   //Create the `bear` sprite
-  bear = new Sprite(resources["img/Lotso_Bear.png"].texture);
+  bear = new Sprite(resources["images/Lotso_Bear.png"].texture);
   bear.scale.set(0.25,0.25);
   bear.y = 96;
   bear.vx = 0;
